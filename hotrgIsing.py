@@ -5,10 +5,11 @@ import optimal as opt
 import master
 import slave
 import tensorlib_new as T
+#from memory_profiler import profile
 import time
 import sys
 beta=1.0/(2.2691)
-Lx=512;
+Lx=256;
 nsites=2*(Lx**2)
 ntensors=Lx**2;
 chi_max=30;
@@ -45,31 +46,38 @@ logZ+= (ntensors)*math.log(norm)
 #A=A/norm
 #logZ+= (ntensors)*math.log(norm)
 
-M_tensors=[A,A]
-M_shapes=[np.shape(tensor) for tensor in M_tensors]
-M_contr=[[1,-7,4,6],[2,3,5,-7]]
+M_shapes=[[chi_max,chi_max,chi_max,chi_max],[chi_max,chi_max,chi_max,chi_max], [chi_max,chi_max,chi_max,chi_max], [chi_max,chi_max,chi_max,chi_max]]
+M_contr=[[2,-5,-6,-9],[4,-5,-6,-10], [3,-10,-7,-8],[1,-9,-7,-8]]
 contr_tmp=[M_contr[j][:] for j in range(0,len(M_contr))]
 shapes_tmp=[M_shapes[j][:] for j in range(0,len(M_shapes))]
-instr_V,transp_V=master.instr_gen(shapes_tmp,contr_tmp);
+instr_V1,transp_V1=master.instr_gen(shapes_tmp,contr_tmp);
 
-M_tensors=[A,A]
-M_shapes=[np.shape(tensor) for tensor in M_tensors]
-M_contr=[[1,2,-7,5],[-7,3,4,6]]
+M_shapes=[[chi_max,chi_max,chi_max,chi_max],[chi_max,chi_max,chi_max,chi_max], [chi_max,chi_max,chi_max,chi_max], [chi_max,chi_max,chi_max,chi_max]]
+M_contr=[[-6,-5,2,-9],[-6,-5,4,-10], [-7,-10,3,-8],[-7,-9,1,-8]]
 contr_tmp=[M_contr[j][:] for j in range(0,len(M_contr))]
 shapes_tmp=[M_shapes[j][:] for j in range(0,len(M_shapes))]
-instr_H,transp_H=master.instr_gen(shapes_tmp,contr_tmp);
+instr_V2,transp_V2=master.instr_gen(shapes_tmp,contr_tmp);
 
-U=np.zeros([dim,dim])
-M_tensors=[A,U,U]
-M_shapes=[np.shape(tensor) for tensor in M_tensors]
-M_contr=[[-5,2,-6,4],[-5,1],[-6,3]]
+M_shapes=[[chi_max,chi_max,chi_max,chi_max],[chi_max,chi_max,chi_max,chi_max], [chi_max,chi_max,chi_max,chi_max], [chi_max,chi_max,chi_max,chi_max]]
+M_contr=[[-8,1,-3,-4],[-3,2,-7,-5], [-6,4,-7,-5],[-8,3,-6,-4]]
+contr_tmp=[M_contr[j][:] for j in range(0,len(M_contr))]
+shapes_tmp=[M_shapes[j][:] for j in range(0,len(M_shapes))]
+instr_H1,transp_H1=master.instr_gen(shapes_tmp,contr_tmp);
+
+M_shapes=[[chi_max,chi_max,chi_max,chi_max],[chi_max,chi_max,chi_max,chi_max], [chi_max,chi_max,chi_max,chi_max], [chi_max,chi_max,chi_max,chi_max]]
+M_contr=[[-8,-4,-3,1],[-3,-5,-7,2], [-6,-5,-7,4],[-8,-4,-6,3]]
+contr_tmp=[M_contr[j][:] for j in range(0,len(M_contr))]
+shapes_tmp=[M_shapes[j][:] for j in range(0,len(M_shapes))]
+instr_H2,transp_H2=master.instr_gen(shapes_tmp,contr_tmp);
+
+M_shapes=[[chi_max,chi_max,chi_max,chi_max],[chi_max,chi_max,chi_max,chi_max], [chi_max,chi_max,chi_max],[chi_max, chi_max, chi_max]]
+M_contr=[[-8,2,-9,-6],[-5,-6,-7,4],[-5,-8,1],[-7,-9,3]]
 contr_tmp=[M_contr[j][:] for j in range(0,len(M_contr))]
 shapes_tmp=[M_shapes[j][:] for j in range(0,len(M_shapes))]
 instr_tH,transp_tH=master.instr_gen(shapes_tmp,contr_tmp);
 
-M_tensors=[A,U,U]
-M_shapes=[np.shape(tensor) for tensor in M_tensors]
-M_contr=[[1,-5,3,-6],[-5,2],[-6,4]]
+M_shapes=[[chi_max,chi_max,chi_max,chi_max],[chi_max,chi_max,chi_max,chi_max], [chi_max,chi_max,chi_max],[chi_max, chi_max, chi_max]]
+M_contr=[[1,-5,-7,-8],[-7,-6,3,-9],[-5,-6,2],[-8,-9,4]]
 contr_tmp=[M_contr[j][:] for j in range(0,len(M_contr))]
 shapes_tmp=[M_shapes[j][:] for j in range(0,len(M_shapes))]
 instr_tV,transp_tV=master.instr_gen(shapes_tmp,contr_tmp);
@@ -79,23 +87,20 @@ instr_tV,transp_tV=master.instr_gen(shapes_tmp,contr_tmp);
 rg_step=1
 while(ntensors>4) :
     print "ntensors=",ntensors
-    M_tensors=[A,A]
-    slave.contract(M_tensors,instr_V,transp_V)
-    print "contracted"
-    M=M_tensors[0]
-    dim=np.shape(M)
-    M=np.reshape(M,[dim[0]*dim[1],dim[2],dim[3]*dim[4],dim[5]])
-    MMD=np.tensordot(M,np.conjugate(M),axes=([1,2,3],[1,2,3]))
-    #print np.shape(M),"MMD",np.shape(MMD)
-    SL2,UL=LA.eigh(MMD)
+    M_tensors=[A,A,A,A]
+    slave.contract(M_tensors,instr_V1,transp_V1)
+    MMD=M_tensors[0]
+    dim=np.shape(MMD)
+    SL2,UL=LA.eigh(MMD.reshape([dim[0]*dim[1],dim[0]*dim[1]]))
     full=np.shape(SL2)[0]
     chi=min(chi_max,full)
     eps1=np.sum(SL2[0:full-chi])
        
 
-    dim=np.shape(M)
-    MMD=np.tensordot(M,np.conjugate(M),axes=([0,1,3],[0,1,3]))
-    SR2,UR=LA.eigh(MMD)
+    M_tensors=[A,A,A,A]
+    slave.contract(M_tensors,instr_V2,transp_V2)
+    MMD=M_tensors[0]
+    SR2,UR=LA.eigh(MMD.reshape([dim[0]*dim[1],dim[0]*dim[1]]))
     full=np.shape(SR2)[0]
     chi=min(chi_max,full)
     eps2=np.sum(SR2[0:full-chi])
@@ -104,7 +109,8 @@ while(ntensors>4) :
         U=UL[:,full-chi:full]
     else :
         U=UR[:,full-chi:full]
-    M_tensors=[M,U,U]
+    U=U.reshape([dim[0],dim[1],chi])
+    M_tensors=[A,A,U,U]
     slave.contract(M_tensors,instr_tH,transp_tH)
     A=M_tensors[0]
     print "shapes1",np.shape(A)
@@ -113,22 +119,21 @@ while(ntensors>4) :
     
 
 
-    M_tensors=[A,A]
-    slave.contract(M_tensors,instr_H,transp_H)
-    M=M_tensors[0]
-    dim=np.shape(M)
-    M=np.reshape(M,[dim[0],dim[1]*dim[2],dim[3],dim[4]*dim[5]])
-    MMD=np.tensordot(M,np.conjugate(M),axes=([0,2,3],[0,2,3]))
-    SL2,UL=LA.eigh(MMD)
+    M_tensors=[A,A,A,A]
+    slave.contract(M_tensors,instr_H1,transp_H1)
+    MMD=M_tensors[0]
+    dim=np.shape(MMD)
+    SL2,UL=LA.eigh(MMD.reshape([dim[1]*dim[2],dim[1]*dim[2]]))
     full=np.shape(SL2)[0]
     chi=min(chi_max,full)
     eps1=np.sum(SL2[0:full-chi])
        
 
-    dim=np.shape(M)
-    #M=np.reshape(M,[dim[0],dim[1]*dim[2],dim[3],dim[4]*dim[5]])
-    MMD=np.tensordot(M,np.conjugate(M),axes=([0,1,2],[0,1,2]))
-    SR2,UR=LA.eigh(MMD)
+    M_tensors=[A,A,A,A]
+    slave.contract(M_tensors,instr_H2,transp_H2)
+    MMD=M_tensors[0]
+    dim=np.shape(MMD)
+    SR2,UR=LA.eigh(MMD.reshape([dim[1]*dim[2],dim[1]*dim[2]]))
     full=np.shape(SR2)[0]
     chi=min(chi_max,full)
     eps2=np.sum(SR2[0:full-chi])
@@ -138,7 +143,9 @@ while(ntensors>4) :
     else :
         U=UR[:,full-chi:full]
     #print "shapes2",np.shape(M),np.shape(U)
-    M_tensors=[M,U,U]
+    U=U.reshape([dim[1],dim[2],chi])
+    U=U.reshape([dim[0],dim[1],chi])
+    M_tensors=[A,A,U,U]
     slave.contract(M_tensors,instr_tV,transp_tV)
     A=M_tensors[0]
     print "shapes2",np.shape(A)
@@ -149,37 +156,37 @@ while(ntensors>4) :
     #sys.stdin.read(1)
     A=A/norm;
 
-    #if(rg_step>4) : 
-    #  f=norm;
-    #  print "f=",f
-    #  L=f
-    #  T_inv=A/L
-    #  tmp=[T_inv]
-    #  T.network(tmp,[[-1,2,-1,3]],[-1])
-    #  e,v=LA.eigh(tmp[0])
-    #  #print e
+    if(rg_step>4) : 
+      f=norm;
+      print "f=",f
+      L=f
+      T_inv=A/(L**(1/3.0))
+      tmp=[T_inv]
+      T.network(tmp,[[-1,2,-1,3]],[-1])
+      e,v=LA.eigh(tmp[0])
+      #print e
 
 
-    #  if(e[-1]>0) :
-    #    charge=(6.0/math.pi)*math.log(e[-1]);
-    #    print "Central charge =", (6.0/math.pi)*math.log(e[-1]);
-    #    print "1st scaling dimension  =",((charge/(12.0))-math.log(e[-2])/(2*math.pi))
-    #    print "2st scaling dimension  =",((charge/(12.0))-math.log(e[-3])/(2*math.pi))
-    #    print "2st scaling dimension  =",((charge/(12.0))-math.log(e[-4])/(2*math.pi))
-    #    print "2st scaling dimension  =",((charge/(12.0))-math.log(e[-5])/(2*math.pi))
-    #    print "2st scaling dimension  =",((charge/(12.0))-math.log(e[-6])/(2*math.pi))
-    #    print "2st scaling dimension  =",((charge/(12.0))-math.log(e[-7])/(2*math.pi))
-    #    print "2st scaling dimension  =",((charge/(12.0))-math.log(e[-8])/(2*math.pi))
-    #  print "f =", f
-    #  charge= (6.0/math.pi)*math.log(e[-1]);
-    #  l1=((charge/(12.0))-math.log(e[-2])/(2*math.pi))
-    #  l2=((charge/(12.0))-math.log(e[-3])/(2*math.pi))
-    #  l3=((charge/(12.0))-math.log(e[-4])/(2*math.pi))
-    #  l4=((charge/(12.0))-math.log(e[-5])/(2*math.pi))
-    #  l5=((charge/(12.0))-math.log(e[-6])/(2*math.pi))
-    #  l6=((charge/(12.0))-math.log(e[-7])/(2*math.pi))
-    #  l7=((charge/(12.0))-math.log(e[-8])/(2*math.pi))
-    #  #sys.stdin.read(1)
+      if(e[-1]>0) :
+        charge=(6.0/math.pi)*math.log(e[-1]);
+        print "Central charge =", (6.0/math.pi)*math.log(e[-1]);
+        print "1st scaling dimension  =",((charge/(12.0))-math.log(e[-2])/(2*math.pi))
+        print "2st scaling dimension  =",((charge/(12.0))-math.log(e[-3])/(2*math.pi))
+        print "2st scaling dimension  =",((charge/(12.0))-math.log(e[-4])/(2*math.pi))
+        print "2st scaling dimension  =",((charge/(12.0))-math.log(e[-5])/(2*math.pi))
+        print "2st scaling dimension  =",((charge/(12.0))-math.log(e[-6])/(2*math.pi))
+        print "2st scaling dimension  =",((charge/(12.0))-math.log(e[-7])/(2*math.pi))
+        print "2st scaling dimension  =",((charge/(12.0))-math.log(e[-8])/(2*math.pi))
+      print "f =", f
+      charge= (6.0/math.pi)*math.log(e[-1]);
+      l1=((charge/(12.0))-math.log(e[-2])/(2*math.pi))
+      l2=((charge/(12.0))-math.log(e[-3])/(2*math.pi))
+      l3=((charge/(12.0))-math.log(e[-4])/(2*math.pi))
+      l4=((charge/(12.0))-math.log(e[-5])/(2*math.pi))
+      l5=((charge/(12.0))-math.log(e[-6])/(2*math.pi))
+      l6=((charge/(12.0))-math.log(e[-7])/(2*math.pi))
+      l7=((charge/(12.0))-math.log(e[-8])/(2*math.pi))
+      #sys.stdin.read(1)
     
     
 
