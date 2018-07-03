@@ -1,5 +1,5 @@
 import math
-import numpy as np
+import numpy as np 
 import scipy.linalg as LA
 import optimal as opt
 import master
@@ -8,11 +8,13 @@ import tensorlib_new as T
 #from memory_profiler import profile
 import time
 import sys
-beta=1.0/(2.2691)
-Lx=1024;
+temp=#T#
+beta=1.0/(temp)
+hmag=0
+Lx=512;
 nsites=2*(Lx**2)
 ntensors=Lx**2;
-chi_max=70;
+chi_max=30;
 #intitialization of tensors
 A=np.zeros([2,2,2,2]);
 I=np.zeros([2,2,2,2]);
@@ -25,14 +27,15 @@ for i in range(0,2):
         i2=2*j-1
         i3=2*k-1
         i4=2*l-1
-        A[i,j,k,l]=math.exp(beta*(i1*i2+i2*i3+i3*i4+i1*i4))
-        I[i,j,k,l]=(i1+i2+i3+i4)*math.exp(beta*(i1*i2+i2*i3+i3*i4+i1*i4))
+        A[i,j,k,l]=math.exp(beta*(i1*i2+i2*i3+i3*i4+i1*i4+hmag*(i1+i2+i3+i4)))
+        I[i,j,k,l]=(i1+i2+i3+i4)*math.exp(beta*(i1*i2+i2*i3+i3*i4+i1*i4+hmag*(i1+i2+i3+i4)))
     
 fname="TRGIsing_%f_%d.dat"%(1/beta,chi_max)
 outfile=open(fname,"w")
 dim=np.shape(A)[0]
 norm=np.trace(np.reshape(A,[dim**2,dim**2]))
 A=A/norm
+I=I/norm
 logZ=0;
 logZ+= (ntensors)*math.log(norm)
 
@@ -83,6 +86,8 @@ instr_tV,transp_tV=master.instr_gen(shapes_tmp,contr_tmp);
 rg_step=1
 while(ntensors>4) :
     print "ntensors=",ntensors
+    #Impurity tensors contraction.
+
     #Pure tensors contraction.
     M_tensors=[A,A,A,A]
     slave.contract(M_tensors,instr_V1,transp_V1)
@@ -101,39 +106,19 @@ while(ntensors>4) :
     full=np.shape(SR2)[0]
     chi=min(chi_max,full)
     eps2=np.sum(SR2[0:full-chi])
-    #print "eps",eps1,eps2
+    print "eps uni",eps1,eps2
     if(eps1<eps2) :
         U=UL[:,full-chi:full]
     else :
         U=UR[:,full-chi:full]
     U=U.reshape([dim[0],dim[1],chi])
+    M_tensors=[I,A,U,U]
+    print np.shape(A),np.shape(U),np.shape(I)
+    slave.contract(M_tensors,instr_tH,transp_tH)
+    I=M_tensors[0]
     M_tensors=[A,A,U,U]
     slave.contract(M_tensors,instr_tH,transp_tH)
     A=M_tensors[0]
-    #Impurity tensors contraction.
-    M_tensors=[I,I,A,A]
-    slave.contract(M_tensors,instr_V1,transp_V1)
-    MMD=M_tensors[0]
-    dim=np.shape(MMD)
-    SL2,UL=LA.eigh(MMD.reshape([dim[0]*dim[1],dim[0]*dim[1]]))
-    full=np.shape(SL2)[0]
-    chi=min(chi_max,full)
-    eps1=np.sum(SL2[0:full-chi])
-    M_tensors=[I,I,A,A]
-    slave.contract(M_tensors,instr_V2,transp_V2)
-    MMD=M_tensors[0]
-    SR2,UR=LA.eigh(MMD.reshape([dim[0]*dim[1],dim[0]*dim[1]]))
-    full=np.shape(SR2)[0]
-    chi=min(chi_max,full)
-    eps2=np.sum(SR2[0:full-chi])
-    #print "eps",eps1,eps2
-    if(eps1<eps2) :
-        U=UL[:,full-chi:full]
-    else :
-        U=UR[:,full-chi:full]
-    M_tensors=[I,A,U,U]
-    slave.contract(M_tensors,instr_tH,transp_tH)
-    I=M_tensors[0]
 
    
 
@@ -142,40 +127,10 @@ while(ntensors>4) :
 
 
     
-
-
-    M_tensors=[A,A,A,A]
-    slave.contract(M_tensors,instr_H1,transp_H1)
-    MMD=M_tensors[0]
-    dim=np.shape(MMD)
-    SL2,UL=LA.eigh(MMD.reshape([dim[1]*dim[2],dim[1]*dim[2]]))
-    full=np.shape(SL2)[0]
-    chi=min(chi_max,full)
-    eps1=np.sum(SL2[0:full-chi])
-       
-
-    M_tensors=[A,A,A,A]
-    slave.contract(M_tensors,instr_H2,transp_H2)
-    MMD=M_tensors[0]
-    dim=np.shape(MMD)
-    SR2,UR=LA.eigh(MMD.reshape([dim[1]*dim[2],dim[1]*dim[2]]))
-    full=np.shape(SR2)[0]
-    chi=min(chi_max,full)
-    eps2=np.sum(SR2[0:full-chi])
-    print "eps",eps1,eps2
-    if(eps1<eps2) :
-        U=UL[:,full-chi:full]
-    else :
-        U=UR[:,full-chi:full]
-    #print "shapes2",np.shape(M),np.shape(U)
-    U=U.reshape([dim[1],dim[2],chi])
-    U=U.reshape([dim[0],dim[1],chi])
-    M_tensors=[A,A,U,U]
-    slave.contract(M_tensors,instr_tV,transp_tV)
-    A=M_tensors[0]
-
     #IMpurity tensors renormalization.
-    M_tensors=[I,A,A,I]
+
+
+    M_tensors=[A,A,A,A]
     slave.contract(M_tensors,instr_H1,transp_H1)
     MMD=M_tensors[0]
     dim=np.shape(MMD)
@@ -185,7 +140,7 @@ while(ntensors>4) :
     eps1=np.sum(SL2[0:full-chi])
        
 
-    M_tensors=[I,A,I,A]
+    M_tensors=[A,A,A,A]
     slave.contract(M_tensors,instr_H2,transp_H2)
     MMD=M_tensors[0]
     dim=np.shape(MMD)
@@ -193,7 +148,7 @@ while(ntensors>4) :
     full=np.shape(SR2)[0]
     chi=min(chi_max,full)
     eps2=np.sum(SR2[0:full-chi])
-    print "eps",eps1,eps2
+    print "eps uni",eps1,eps2
     if(eps1<eps2) :
         U=UL[:,full-chi:full]
     else :
@@ -204,6 +159,10 @@ while(ntensors>4) :
     M_tensors=[I,A,U,U]
     slave.contract(M_tensors,instr_tV,transp_tV)
     I=M_tensors[0]
+    M_tensors=[A,A,U,U]
+    slave.contract(M_tensors,instr_tV,transp_tV)
+    A=M_tensors[0]
+
 
     print "shapes2",np.shape(A)
     dim=np.shape(A)
@@ -227,25 +186,25 @@ while(ntensors>4) :
 
       if(e[-1]>0) :
         charge=(6.0/math.pi)*math.log(e[-1]);
-        print "Central charge =", (6.0/math.pi)*math.log(e[-1]);
-        print "1st scaling dimension  =",((charge/(12.0))-math.log(e[-2])/(2*math.pi))
-        print "2st scaling dimension  =",((charge/(12.0))-math.log(e[-3])/(2*math.pi))
-        print "2st scaling dimension  =",((charge/(12.0))-math.log(e[-4])/(2*math.pi))
-        print "2st scaling dimension  =",((charge/(12.0))-math.log(e[-5])/(2*math.pi))
-        print "2st scaling dimension  =",((charge/(12.0))-math.log(e[-6])/(2*math.pi))
-        print "2st scaling dimension  =",((charge/(12.0))-math.log(e[-7])/(2*math.pi))
-        print "2st scaling dimension  =",((charge/(12.0))-math.log(e[-8])/(2*math.pi))
-      print "f =", f
-      charge= (6.0/math.pi)*math.log(e[-1]);
-      l1=((charge/(12.0))-math.log(e[-2])/(2*math.pi))
-      l2=((charge/(12.0))-math.log(e[-3])/(2*math.pi))
-      l3=((charge/(12.0))-math.log(e[-4])/(2*math.pi))
-      l4=((charge/(12.0))-math.log(e[-5])/(2*math.pi))
-      l5=((charge/(12.0))-math.log(e[-6])/(2*math.pi))
-      l6=((charge/(12.0))-math.log(e[-7])/(2*math.pi))
-      l7=((charge/(12.0))-math.log(e[-8])/(2*math.pi))
-      #sys.stdin.read(1)
-      print>>outfile,"%d %f %f %f %f %f %f %f %f "%(rg_step,charge,l1,l2,l3,l4,l5,l6,l7)
+        #print "Central charge =", (6.0/math.pi)*math.log(e[-1]);
+        #print "1st scaling dimension  =",((charge/(12.0))-math.log(e[-2])/(2*math.pi))
+        #print "2st scaling dimension  =",((charge/(12.0))-math.log(e[-3])/(2*math.pi))
+        #print "2st scaling dimension  =",((charge/(12.0))-math.log(e[-4])/(2*math.pi))
+        #print "2st scaling dimension  =",((charge/(12.0))-math.log(e[-5])/(2*math.pi))
+        #print "2st scaling dimension  =",((charge/(12.0))-math.log(e[-6])/(2*math.pi))
+        #print "2st scaling dimension  =",((charge/(12.0))-math.log(e[-7])/(2*math.pi))
+        #print "2st scaling dimension  =",((charge/(12.0))-math.log(e[-8])/(2*math.pi))
+      #print "f =", f
+      #charge= (6.0/math.pi)*math.log(e[-1]);
+      #l1=((charge/(12.0))-math.log(e[-2])/(2*math.pi))
+      #l2=((charge/(12.0))-math.log(e[-3])/(2*math.pi))
+      #l3=((charge/(12.0))-math.log(e[-4])/(2*math.pi))
+      #l4=((charge/(12.0))-math.log(e[-5])/(2*math.pi))
+      #l5=((charge/(12.0))-math.log(e[-6])/(2*math.pi))
+      #l6=((charge/(12.0))-math.log(e[-7])/(2*math.pi))
+      #l7=((charge/(12.0))-math.log(e[-8])/(2*math.pi))
+      ##sys.stdin.read(1)
+      #print>>outfile,"%d %f %f %f %f %f %f %f %f "%(rg_step,charge,l1,l2,l3,l4,l5,l6,l7)
     
     
 
@@ -264,6 +223,6 @@ logZ+= math.log(M_tensors[0])
 
 
 f1=open('dataTRG.dat',"a")
-print>>f1,"%.16f %.16f %.16f"%(1/beta,-(1/beta)*logZ/nsites,math.exp(logZp/logZ))
+print>>f1,"%.16f %.16f %.16f"%(1/beta,-(1/beta)*logZ/nsites,math.exp(logZp-logZ))
 
 
